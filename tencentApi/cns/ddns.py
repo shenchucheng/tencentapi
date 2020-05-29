@@ -210,8 +210,7 @@ class DDns(CnsApi):
             __main()
 
 
-def main():
-    basicConfig(level=10)
+def ip_check():
     logger.debug('测试开始')
     logger.debug('正在检测网络环境')
     ipv4 = get_host_ip(socket.AF_INET, '119.29.29.29')
@@ -229,6 +228,11 @@ def main():
     for addr in ['baidu.com', 'google.com']:
         ips = get_addr_ip(addr)
         logger.debug('{} 解析ip：{}'.format(addr, ips))
+
+
+def main():
+    basicConfig(level=10)
+    ip_check()
     ddns = DDns('baidu.com', {'value': 'ipv6', 'type': 'AAAA'},
             secretId='AKIDz8krbsJ5yKBZQpn74WFkmLPx3gnPhESA',
             secretKey='Gu5t9xGARNpq86cd98joQYCN3Cozk1qA')

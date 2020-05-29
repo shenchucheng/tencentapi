@@ -6,3 +6,5 @@
 
 
 from .cns import CnsApi
+from .ddns import get_host_ip, DDns, ip_check
+
