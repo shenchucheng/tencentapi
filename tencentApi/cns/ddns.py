@@ -23,7 +23,7 @@ logger = getLogger('ddns')
 
 
 def get_host_ip(family=socket.AF_INET6, dns='240e:4c:4008::1'):
-    """get_host_ip.
+    """
     获取本机ip，参数不同决定ipv4还是ipv6
     修改family参数注意修改dns为对应值
     :param family: AddressFamily 可设置为sock.AF_INET
@@ -44,7 +44,7 @@ def get_host_ip(family=socket.AF_INET6, dns='240e:4c:4008::1'):
 
 
 def get_addr_ip(addr, port=80, **kwargs):
-    """get_addr_ip.
+    """
     域名解析 
     :param addr: str 查询域名
     :param port: int 域名端口 默认 80
@@ -63,7 +63,7 @@ def get_addr_ip(addr, port=80, **kwargs):
 
 class DDns(CnsApi):
     def __init__(self, domain, record={}, interval=-1, create=False, **kwargs):
-        """__init__.
+        """
         动态域名解析
         :param domain: str 解析域名
         :param record:  dict 解析记录查询信息
@@ -92,7 +92,7 @@ class DDns(CnsApi):
         elif l == 1:
             self.record = self.records[0]
         else:
-            logger.info('查询条件匹配多个记录,{},默认匹配第一个'.format(records))
+            logger.info('查询条件匹配多个记录,{},默认匹配第一个'.format(self.records))
             # 这边可修改为询问
             self.record = self.records[0]
         if interval < 1:
@@ -182,7 +182,6 @@ class DDns(CnsApi):
             diff_check = self.diff_check
         
         def ddns():
-            logger.debug()
             ip = diff_check()
             if ip:
                 record_operate(ip=ip)
