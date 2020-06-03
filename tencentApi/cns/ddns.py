@@ -22,7 +22,7 @@ from .cns import CnsApi
 logger = getLogger('ddns')
 
 
-def get_host_ip(family=socket.AF_INET6, dns='240e:4c:4008::1'):
+def get_host_ip(family=socket.AF_INET6, dns='240e:4c:4008::1', check=True):
     """
     获取本机ip，参数不同决定ipv4还是ipv6
     修改family参数注意修改dns为对应值
@@ -37,8 +37,9 @@ def get_host_ip(family=socket.AF_INET6, dns='240e:4c:4008::1'):
         ip = s.getsockname()[0]
         return ip
     except Exception as e:
-        # 未联网
-        logger.warning('Fail to get local ip for {}'.format(e))
+        if check:
+            logger.warn('Fail to get local ip for {}'.format(e))
+            raise e
     finally:
         s.close()
 
@@ -97,6 +98,8 @@ class DDns(CnsApi):
             self.record = self.records[0]
         if interval < 1:
             self.interval = self.record['ttl']
+        else:
+            self.interval = interval
 
     @property
     def record(self):
@@ -178,8 +181,11 @@ class DDns(CnsApi):
                 record_operate = self.__ddns_delete
         else:
             record_operate = modify
+
         if not callable(diff_check):
             diff_check = self.diff_check
+
+        interval = kwargs.get('interval') or self.interval
         
         def ddns():
             ip = diff_check()
@@ -196,12 +202,26 @@ class DDns(CnsApi):
             while 1:
                 try:
                     ddns()
-                    sleep(kwargs.get('interval') or self.interval)
+                    sleep(interval)
                 except KeyboardInterrupt:
                     logger.info("Exit for user interrupt")
                     sys.exit()
+                except OSError:
+                    r = ip_check()
+                    if r == False:
+                        while 1:
+                            logger.warn('无网络连接，{}秒后重试'.format(interval))
+                            sleep(interval)
+                    elif r == True:
+                        raise
+
+                    else:
+                        logger.info('网络检测结果：{}'.format(r))
+                        logger.warn('当前网络不符合动态域名解析要求')
+
                 except Exception as e:
                     logger.critical("发生错误{}，程序结束运行".format(e))
+                    sys.exit()
 
         if kwargs.get("unblock"):
             Thread(target=__main).start()
@@ -212,21 +232,23 @@ class DDns(CnsApi):
 def ip_check():
     logger.debug('测试开始')
     logger.debug('正在检测网络环境')
-    ipv4 = get_host_ip(socket.AF_INET, '119.29.29.29')
-    ipv6 = get_host_ip()
-    if not (ipv4 and ipv6):
-        logger.debug('联网失败，请检查网络连接')
-        return
+    ipv4 = get_host_ip(socket.AF_INET, '119.29.29.29', check=False)
+    ipv6 = get_host_ip(check=False)
+    if not (ipv4 or ipv6):
+        logger.warn('联网失败，请检查网络连接')
+        return False
     else:
         if ipv4 and ipv6:
-            logger.debug('ipv4：{}\nipv6：{}\n'.format(ipv4, ipv6))
-            logger.debug('当前同时支持ipv4与ipv6')
+            logger.info('ipv4：{}\nipv6：{}\n'.format(ipv4, ipv6))
+            logger.info('当前同时支持ipv4与ipv6')
+            return True
         else:
             params = ('ipv4', ipv4) if ipv4 else ('ipv6', ipv6)
-            logger.debug('当前仅支持{}：'.format(*params))
-    for addr in ['baidu.com', 'google.com']:
-        ips = get_addr_ip(addr)
-        logger.debug('{} 解析ip：{}'.format(addr, ips))
+            logger.info('当前仅支持{}：'.format(*params))
+            return params
+    # for addr in ['baidu.com', 'google.com']:
+    #     ips = get_addr_ip(addr)
+    #     logger.debug('{} 解析ip：{}'.format(addr, ips))
 
 
 def main():
