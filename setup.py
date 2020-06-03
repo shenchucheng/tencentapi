@@ -10,7 +10,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="tencentApi-shenchucheng",
+    name="tencentApi",
     version="0.1.0",
     author="shenchucheng",
     author_email="shenchucheng@126.com",
