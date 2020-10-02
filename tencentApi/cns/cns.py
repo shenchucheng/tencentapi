@@ -9,6 +9,9 @@
 
 @class CnsApi 域名解析类 对域名进行增删改操作
 """
+import json 
+
+
 from logging import getLogger
 from ..api import Api
 
@@ -49,11 +52,11 @@ class CnsApi(Api):
             self.domain = domain[0]
     
     @property
-    def domains_info():
+    def domains_info(self):
         return self.__domains_info
 
     @property
-    def records_info():
+    def records_info(self):
         return self.__records_info
 
     def domain_list(self, **kwargs):
@@ -113,7 +116,7 @@ class CnsApi(Api):
         logger.debug('请求成功，删除域名{}'.format(domain))
         return self.__domains_info.pop(domain, {'domain': domain})
 
-    def record_list(self, domain='', **kwargs):
+    def record_list(self, domain='', update=False, filename='records.json', **kwargs):
         """record_list
         获取域名解析列表
         api接口：https://cloud.tencent.com/document/api/302/8517
@@ -122,8 +125,18 @@ class CnsApi(Api):
             offset length subDomain recordType qProjectId
         :return: dict 请求接口返回值，解析记录列表
         """
-        domain = domain or self.domain or self.__domains_info.keys()[0]
-        data = self.get(action='RecordList', domain=domain, **kwargs)['data']
+        domain = domain or self.domain or list(self.__domains_info.keys())[0]
+        data = {}
+        if not update:
+            try:
+                with open(filename, 'r') as f:
+                    data = json.load(f)
+            except Exception:
+                logger.exception('获取缓存失败', exc_info=True)
+        if not data:
+            data = data or self.get(action='RecordList', domain=domain, **kwargs)['data']
+            with open(filename, mode='w') as f:
+                json.dump(data, f)
         logger.debug('请求成功，获取域名解析记录数信息：{}'.format(data['info']))
         __domain = self.__domains_info.get(domain, {})
         __domain.update(data['domain'])

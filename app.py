@@ -68,6 +68,7 @@ class ddns(DDns):
     动态域名解析 
     """ 
     def __init__(self, profile='', debug='', domain='', record='', secretId='', secretKey='', **kwargs):
+        print(profile)
         if profile:
             with open(profile, 'r') as f:
                 config = json.load(f)

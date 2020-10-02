@@ -81,8 +81,7 @@ class DDns(CnsApi):
         self.records = self.get_record_info(self.domain, **record)
         l = len(self.records)
         if l == 0:
-            if create and type(create) == dict:
-                logger.info('')
+            if create and type(create) == dict and create.get('subDomain'):
                 create.update(self.convert_record_kwargs(record))
                 self.record_create(self.domain, **create)
                 self.records = self.get_record_info(self.domain, **record)
@@ -128,7 +127,7 @@ class DDns(CnsApi):
         kwargs = self.get_origin_kwargs(info)
         kwargs['value'] = ip
         data = self.record_create(self.domain, **kwargs)
-        self.record_delete(domain, info['id'])
+        self.record_delete(self.domain, info['id'])
         self.records.remove(info)
         new_id = data['record']['id']
         info = self.get_record_info(self.domain, id=new_id)[0]
@@ -257,6 +256,7 @@ def main():
     ddns = DDns('baidu.com', {'value': 'ipv6', 'type': 'AAAA'},
             secretId='AKIDz8krbsJ5yKBZQpn74WFkmLPx3gnPhESA',
             secretKey='Gu5t9xGARNpq86cd98joQYCN3Cozk1qA')
+    return ddns
     
 if __name__ == '__main__':
     main()
