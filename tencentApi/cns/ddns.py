@@ -63,7 +63,7 @@ def get_addr_ip(addr, port=80, **kwargs):
 
 
 class DDns(CnsApi):
-    def __init__(self, domain, record={}, interval=-1, create=False, **kwargs):
+    def __init__(self, domain, record={}, interval=300, create=False, **kwargs):
         """
         动态域名解析
         :param domain: str 解析域名
@@ -76,32 +76,39 @@ class DDns(CnsApi):
         """
         super().__init__(domain, **kwargs)
         self.domain = domain
-        self.__record = {}
-        self.record_list(self.domain, **kwargs)
-        self.records = self.get_record_info(self.domain, **record)
-        l = len(self.records)
-        if l == 0:
-            if create and type(create) == dict and create.get('subDomain'):
-                create.update(self.convert_record_kwargs(record))
-                self.record_create(self.domain, **create)
-                self.records = self.get_record_info(self.domain, **record)
+        self.__record = None
+        if record.get('name'):
+            self.subDomain = record.get('name')
+            self.addr = '.'.join([self.subDomain, self.domain])
+        self.interval = interval
+        def load_record():
+            self.record_list(self.domain, **kwargs)
+            self.records = self.get_record_info(self.domain, **record)
+            l = len(self.records)
+            if l == 0:
+                if create and type(create) == dict and create.get('subDomain'):
+                    create.update(self.convert_record_kwargs(record))
+                    self.record_create(self.domain, **create)
+                    self.records = self.get_record_info(self.domain, **record)
+                    self.record = self.records[0]
+                else:
+                    logger.critical('查询记录为{}的解析记录不存在'.format(record))
+                    raise TypeError('指定值的解析记录不存在，且未在create指定创建记录参数')
+            elif l == 1:
                 self.record = self.records[0]
             else:
-                logger.critical('查询记录为{}的解析记录不存在'.format(record))
-                raise TypeError('指定值的解析记录不存在，且未在create指定创建记录参数')
-        elif l == 1:
-            self.record = self.records[0]
-        else:
-            logger.info('查询条件匹配多个记录,{},默认匹配第一个'.format(self.records))
-            # 这边可修改为询问
-            self.record = self.records[0]
-        if interval < 1:
-            self.interval = self.record['ttl']
-        else:
-            self.interval = interval
+                logger.info('查询条件匹配多个记录,{},默认匹配第一个'.format(self.records))
+                # 这边可修改为询问
+                self.record = self.records[0]
+        self.prepare = load_record
+    
+    def autottl(self):
+        self.interval = self.record['ttl']
 
     @property
     def record(self):
+        if not self.__record:
+            self.prepare()
         return self.__record
         
     @record.setter
@@ -153,12 +160,6 @@ class DDns(CnsApi):
         ip = get_host_ip(**kwargs)
         if ip not in self.get_rm_ip():
             return ip
-
-    def dnspod_AAAA(self):
-        """dnspod_AAAA. 修改AAAA记录"""
-        ip = self.diff_check()
-        if ip:
-            return self.record_modify(self.domain, self.subDomain, value=ip)
 
     def get_rm_ip(self):
         """get_rm_ip. 解析addr"""
