@@ -87,6 +87,11 @@ class ddns(DDns):
         logging.basicConfig(**log)
 
         super().__init__(**config)
+    
+    def dnspod_AAAA(self):
+        """dnspod_AAAA. 修改AAAA记录"""
+        self.run(get_fn_only=True)()
+
 
 def main():
     Fire({
